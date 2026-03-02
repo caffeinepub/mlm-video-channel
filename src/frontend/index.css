@@ -1,0 +1,218 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Font Faces ─────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sora";
+  src: url("/assets/fonts/Sora-Variable.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/assets/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Deep navy-indigo base — premium financial feel */
+    --background: 0.12 0.018 265;
+    --foreground: 0.96 0.006 265;
+
+    --card: 0.16 0.022 265;
+    --card-foreground: 0.96 0.006 265;
+
+    --popover: 0.18 0.025 265;
+    --popover-foreground: 0.96 0.006 265;
+
+    /* Gold primary — trustworthy, India-premium */
+    --primary: 0.82 0.16 75;
+    --primary-foreground: 0.12 0.018 265;
+
+    --secondary: 0.22 0.03 265;
+    --secondary-foreground: 0.85 0.008 265;
+
+    --muted: 0.20 0.025 265;
+    --muted-foreground: 0.58 0.012 265;
+
+    /* Amber accent for highlights */
+    --accent: 0.26 0.035 265;
+    --accent-foreground: 0.82 0.16 75;
+
+    --destructive: 0.63 0.22 25;
+    --destructive-foreground: 0.98 0 0;
+
+    --border: 0.28 0.03 265;
+    --input: 0.22 0.025 265;
+    --ring: 0.82 0.16 75;
+
+    /* Success green */
+    --success: 0.65 0.18 145;
+    --success-foreground: 0.12 0 0;
+
+    /* Warning amber */
+    --warning: 0.78 0.18 65;
+    --warning-foreground: 0.12 0 0;
+
+    --chart-1: 0.82 0.16 75;
+    --chart-2: 0.65 0.18 145;
+    --chart-3: 0.55 0.20 230;
+    --chart-4: 0.75 0.18 320;
+    --chart-5: 0.70 0.20 35;
+
+    --sidebar: 0.10 0.015 265;
+    --sidebar-foreground: 0.96 0.006 265;
+    --sidebar-primary: 0.82 0.16 75;
+    --sidebar-primary-foreground: 0.12 0.018 265;
+    --sidebar-accent: 0.18 0.025 265;
+    --sidebar-accent-foreground: 0.82 0.16 75;
+    --sidebar-border: 0.22 0.025 265;
+    --sidebar-ring: 0.82 0.16 75;
+
+    /* Custom tokens */
+    --gold: 0.82 0.16 75;
+    --gold-dim: 0.65 0.12 75;
+    --gold-glow: 0.90 0.20 85;
+    --navy-deep: 0.08 0.015 265;
+    --navy-surface: 0.16 0.022 265;
+    --gradient-hero: linear-gradient(135deg, oklch(0.08 0.015 265) 0%, oklch(0.14 0.04 260) 50%, oklch(0.10 0.025 280) 100%);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Sora", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* ─── Custom Utilities ───────────────────────────────────────────────────── */
+@layer utilities {
+  .font-display {
+    font-family: "Bricolage Grotesque", sans-serif;
+  }
+
+  .font-mono-custom {
+    font-family: "Geist Mono", monospace;
+  }
+
+  .gold-text {
+    color: oklch(var(--gold));
+  }
+
+  .gold-gradient-text {
+    background: linear-gradient(135deg, oklch(0.9 0.20 85), oklch(0.7 0.14 60));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+
+  .card-glow {
+    box-shadow:
+      0 0 0 1px oklch(var(--gold) / 0.15),
+      0 4px 24px oklch(var(--gold) / 0.08),
+      0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+
+  .card-glow-hover {
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+  }
+
+  .card-glow-hover:hover {
+    box-shadow:
+      0 0 0 1px oklch(var(--gold) / 0.35),
+      0 8px 32px oklch(var(--gold) / 0.15),
+      0 2px 8px rgba(0, 0, 0, 0.5);
+    transform: translateY(-2px);
+  }
+
+  .gold-border {
+    border: 1px solid oklch(var(--gold) / 0.3);
+  }
+
+  .glass-panel {
+    background: oklch(var(--card) / 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid oklch(var(--border) / 0.8);
+  }
+
+  .pattern-bg {
+    background-image:
+      radial-gradient(circle at 20% 20%, oklch(0.82 0.16 75 / 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, oklch(0.55 0.20 230 / 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, oklch(0.10 0.025 280 / 0.5) 0%, transparent 70%);
+  }
+
+  .noise-overlay::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  .status-pending {
+    background: oklch(0.78 0.18 65 / 0.15);
+    color: oklch(0.78 0.18 65);
+    border: 1px solid oklch(0.78 0.18 65 / 0.3);
+  }
+
+  .status-confirmed {
+    background: oklch(0.65 0.18 145 / 0.15);
+    color: oklch(0.65 0.18 145);
+    border: 1px solid oklch(0.65 0.18 145 / 0.3);
+  }
+
+  .status-rejected {
+    background: oklch(0.63 0.22 25 / 0.15);
+    color: oklch(0.63 0.22 25);
+    border: 1px solid oklch(0.63 0.22 25 / 0.3);
+  }
+}
+
+/* ─── Scrollbar Styling ──────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--muted-foreground));
+}
