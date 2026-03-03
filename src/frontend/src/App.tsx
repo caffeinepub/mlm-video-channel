@@ -10,6 +10,7 @@ import {
   useUserById,
 } from "./hooks/useQueries";
 import AdminPage from "./pages/AdminPage";
+import AdminSetupPage from "./pages/AdminSetupPage";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
 import PendingPage from "./pages/PendingPage";
@@ -25,6 +26,8 @@ export default function App() {
 
   const { data: profile, isLoading: profileLoading } = useCallerProfile();
   const { data: role } = useCallerRole();
+
+  const isAdminSetupPage = window.location.pathname === "/admin-setup";
 
   // Check URL for admin route
   useEffect(() => {
@@ -49,6 +52,16 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [rawLoading]);
 
+  // Admin setup page — accessible without any registration
+  if (isAdminSetupPage) {
+    return (
+      <>
+        <AdminSetupPage />
+        <Toaster />
+      </>
+    );
+  }
+
   const isLoading = rawLoading && !loadingTimedOut;
 
   if (isLoading) {
@@ -59,7 +72,7 @@ export default function App() {
             <Loader2 className="w-8 h-8 text-gold animate-spin" />
           </div>
           <p className="text-muted-foreground text-sm font-sans">
-            Loading MLM Video Channel...
+            Loading Tm11PrimeTime...
           </p>
         </div>
         <Toaster />

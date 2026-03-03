@@ -48,7 +48,7 @@ export default function ReferralPage({ user }: ReferralPageProps) {
 
   const shareLink = () => {
     const message = encodeURIComponent(
-      `Join me on MLM Video Channel! Pay ₹100 once to access exclusive videos and earn through referrals.\n\nUse my referral link: ${referralLink}`,
+      `Join me on Tm11PrimeTime! Pay ₹100 once to access exclusive videos and earn through referrals.\n\nUse my referral link: ${referralLink}`,
     );
     window.open(`https://wa.me/?text=${message}`, "_blank");
   };

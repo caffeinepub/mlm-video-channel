@@ -64,7 +64,7 @@ export default function PendingPage({ user }: PendingPageProps) {
 
   const shareOnWhatsApp = () => {
     const message = encodeURIComponent(
-      `Join me on MLM Video Channel! Pay ₹100 once to access exclusive videos and earn through referrals.\n\nUse my referral link: ${referralLink}`,
+      `Join me on Tm11PrimeTime! Pay ₹100 once to access exclusive videos and earn through referrals.\n\nUse my referral link: ${referralLink}`,
     );
     window.open(`https://wa.me/?text=${message}`, "_blank");
   };
@@ -82,11 +82,11 @@ export default function PendingPage({ user }: PendingPageProps) {
         <div className="flex items-center gap-3">
           <img
             src="/assets/generated/mlm-logo-transparent.dim_200x200.png"
-            alt="MLM Video Channel"
+            alt="Tm11PrimeTime"
             className="w-9 h-9 rounded-xl"
           />
           <span className="font-display font-bold text-lg gold-gradient-text">
-            MLM Video Channel
+            Tm11PrimeTime
           </span>
         </div>
         <Button

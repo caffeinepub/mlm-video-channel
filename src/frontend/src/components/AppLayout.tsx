@@ -61,11 +61,11 @@ export default function AppLayout({
           >
             <img
               src="/assets/generated/mlm-logo-transparent.dim_200x200.png"
-              alt="MLM Video Channel"
+              alt="Tm11PrimeTime"
               className="w-9 h-9 rounded-lg object-cover"
             />
             <span className="font-display font-bold text-lg gold-gradient-text hidden sm:block">
-              MLM Video Channel
+              Tm11PrimeTime
             </span>
           </button>
 
@@ -213,7 +213,7 @@ export default function AppLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <PlaySquare className="w-4 h-4 text-primary" />
-            <span>MLM Video Channel — Exclusive Members Only</span>
+            <span>Tm11PrimeTime — Exclusive Members Only</span>
           </div>
           <p>
             © {new Date().getFullYear()}. Built with ❤️ using{" "}

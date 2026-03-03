@@ -1,3 +1,4 @@
+import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   User,
@@ -306,6 +307,23 @@ export function useProcessWithdrawal() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pendingWithdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["processedWithdrawals"] });
+    },
+  });
+}
+
+// ─── Assign Role ─────────────────────────────────────────────────────────
+
+export function useAssignRole() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { user: Principal; role: UserRole }>({
+    mutationFn: async ({ user, role }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.assignCallerUserRole(user, role);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["callerRole"] });
+      queryClient.invalidateQueries({ queryKey: ["isAdmin"] });
     },
   });
 }
