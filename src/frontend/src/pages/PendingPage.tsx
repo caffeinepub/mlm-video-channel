@@ -31,6 +31,7 @@ interface PendingPageProps {
 export default function PendingPage({ user }: PendingPageProps) {
   const { clear } = useInternetIdentity();
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [utrInput, setUtrInput] = useState("");
   const submitUTRMutation = useSubmitUTR();
@@ -53,6 +54,19 @@ export default function PendingPage({ user }: PendingPageProps) {
     navigator.clipboard.writeText(referralLink);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(user.referralCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const shareOnWhatsApp = () => {
+    const message = encodeURIComponent(
+      `Join me on MLM Video Channel! Pay ₹100 once to access exclusive videos and earn through referrals.\n\nUse my referral link: ${referralLink}`,
+    );
+    window.open(`https://wa.me/?text=${message}`, "_blank");
   };
 
   const copyUpi = () => {
@@ -248,39 +262,84 @@ export default function PendingPage({ user }: PendingPageProps) {
             <CardHeader className="pb-3">
               <CardTitle className="font-display text-base flex items-center gap-2">
                 <PlaySquare className="w-4 h-4 text-primary" />
-                Your Referral Code
+                Your Referral Code &amp; Link
               </CardTitle>
               <CardDescription>
                 Share with friends to earn when you get activated
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-2">
-                <code className="flex-1 font-mono-custom text-primary font-bold text-lg px-4 py-2 rounded-lg bg-primary/5 border border-primary/20">
-                  {user.referralCode}
-                </code>
+            <CardContent className="space-y-4">
+              {/* Referral Code row */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5 font-medium">
+                  Referral Code
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 font-mono-custom text-primary font-bold text-lg px-4 py-2 rounded-lg bg-primary/5 border border-primary/20 tracking-widest">
+                    {user.referralCode}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyCode}
+                    data-ocid="pending.copy_code.button"
+                    className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 px-3 py-2 rounded-lg border border-primary/20 hover:bg-primary/5 whitespace-nowrap"
+                  >
+                    {copiedCode ? (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    {copiedCode ? "Copied!" : "Copy Code"}
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  readOnly
-                  value={referralLink}
-                  className="flex-1 text-xs font-mono-custom bg-accent border border-border rounded-lg px-3 py-2 text-muted-foreground"
-                  data-ocid="pending.referral_link.input"
-                />
-                <button
-                  type="button"
-                  onClick={copyLink}
-                  data-ocid="pending.copy_referral.button"
-                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 px-3 py-2 rounded-lg border border-primary/20 hover:bg-primary/5 whitespace-nowrap"
+
+              {/* Referral Link row */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5 font-medium">
+                  Referral Link
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={referralLink}
+                    className="flex-1 text-xs font-mono-custom bg-accent border border-border rounded-lg px-3 py-2 text-muted-foreground"
+                    data-ocid="pending.referral_link.input"
+                  />
+                  <button
+                    type="button"
+                    onClick={copyLink}
+                    data-ocid="pending.copy_referral.button"
+                    className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 px-3 py-2 rounded-lg border border-primary/20 hover:bg-primary/5 whitespace-nowrap"
+                  >
+                    {copiedLink ? (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    {copiedLink ? "Copied!" : "Copy Link"}
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={shareOnWhatsApp}
+                data-ocid="pending.share_whatsapp.button"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white"
+                style={{ backgroundColor: "#25D366" }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-4 h-4 fill-current"
+                  xmlns="http://www.w3.org/2000/svg"
+                  role="img"
+                  aria-label="WhatsApp"
                 >
-                  {copiedLink ? (
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5" />
-                  )}
-                  {copiedLink ? "Copied!" : "Copy Link"}
-                </button>
-              </div>
+                  <title>WhatsApp</title>
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                </svg>
+                Share on WhatsApp
+              </button>
             </CardContent>
           </Card>
         </motion.div>

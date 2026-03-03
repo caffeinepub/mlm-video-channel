@@ -8,10 +8,10 @@ import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
-import Migration "migration";
+
 import List "mo:core/List";
 
-(with migration = Migration.run)
+
 actor {
   type User = {
     id : Nat;
