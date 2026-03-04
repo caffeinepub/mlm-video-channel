@@ -8,9 +8,7 @@ import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
-
 import List "mo:core/List";
-
 
 actor {
   type User = {
@@ -71,6 +69,7 @@ actor {
   var videoIdCounter = 0;
   var transactionIdCounter = 0;
   var withdrawalRequestIdCounter = 0;
+  var firstAdminClaimed = false;
 
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -98,10 +97,7 @@ actor {
   };
 
   public shared ({ caller }) func registerUser(name : Text, mobile : Text, upiId : Text, referralCode : ?Text) : async Text {
-    // Prevent anonymous registration
-    if (caller.isAnonymous()) {
-      Runtime.trap("Unauthorized: Anonymous users cannot register");
-    };
+    // Allow guests (including anonymous) to register - no authorization check needed
 
     if (name.size() == 0 or mobile.size() == 0 or upiId.size() == 0 or mobile.size() != 10) {
       Runtime.trap("Invalid user data");
@@ -115,7 +111,7 @@ actor {
     let newUserId = userIdCounter;
     let newReferralCode = "REF" # newUserId.toText();
 
-    // Build ancestors
+    // Build ancestors for 15-level referral chain
     let ancestors : [Nat] = switch (referralCode) {
       case (null) { [] };
       case (?code) { findAncestors(code) };
@@ -141,14 +137,33 @@ actor {
     newReferralCode;
   };
 
-  public shared ({ caller }) func submitUTR(utrId : Text) : async () {
+  public shared ({ caller }) func submitUTR(utrId : Text, name : Text, mobile : Text) : async () {
+    // Only the user themselves can submit their own UTR
     let userId = getRegisteredUserIdFromPrincipal(caller);
+
+    if (utrId.size() == 0) {
+      Runtime.trap("UTR ID cannot be empty");
+    };
+
+    if (name.size() == 0) {
+      Runtime.trap("Name cannot be empty");
+    };
+
+    if (mobile.size() != 10) {
+      Runtime.trap("Mobile number must be exactly 10 characters");
+    };
+
     let user = switch (users.get(userId)) {
       case (null) { Runtime.trap("User does not exist") };
       case (?user) { user };
     };
 
-    let updatedUser : User = { user with utrId = ?utrId };
+    let updatedUser : User = {
+      user with
+      utrId = ?utrId;
+      name;
+      mobile;
+    };
     users.add(userId, updatedUser);
   };
 
@@ -199,6 +214,7 @@ actor {
   };
 
   func distributeReferralEarnings(userId : Nat) {
+    // Level-based referral amounts (in paise)
     let amounts = [10_00, 5_00, 3_00, 2_00, 1_00, 50, 25, 25, 25, 25, 25, 25, 25, 25, 25];
 
     let user = switch (users.get(userId)) {
@@ -247,11 +263,7 @@ actor {
   };
 
   public query ({ caller }) func getUserByReferralCode(referralCode : Text) : async ?User {
-    // Require authentication - only registered users or admins can look up referral codes
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can look up referral codes");
-    };
-
+    // Allow any user (including guests) to look up referral codes for registration purposes
     users.values().toArray().find(func(user) { user.referralCode == referralCode });
   };
 
@@ -491,6 +503,46 @@ actor {
     switch (principalToUserId.get(caller)) {
       case (null) { Runtime.trap("Not a registered user") };
       case (?userId) { userId };
+    };
+  };
+
+  public shared ({ caller }) func claimFirstAdmin() : async Bool {
+    // Check if caller is anonymous
+    if (caller.isAnonymous()) {
+      return false;
+    };
+
+    // Check if an admin has already been claimed
+    if (firstAdminClaimed) {
+      return false;
+    };
+
+    // Update the local admin claim variable
+    firstAdminClaimed := true;
+
+    // Manually update the access control state
+    accessControlState.userRoles.add(caller, #admin);
+    accessControlState.adminAssigned := true;
+
+    true;
+  };
+
+  public shared ({ caller }) func removeUser(userId : Nat) : async () {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+      Runtime.trap("Unauthorized: Only admins can remove users");
+    };
+
+    if (not users.containsKey(userId)) {
+      Runtime.trap("User does not exist");
+    };
+
+    users.remove(userId);
+
+    // Remove principal -> userId mapping
+    let principalsToRemove = principalToUserId.toArray().filter(func((principal, id)) { id == userId }).map(func((principal, _)) { principal });
+    for (principal in principalsToRemove.values()) {
+      principalToUserId.remove(principal);
+      userProfiles.remove(principal);
     };
   };
 };

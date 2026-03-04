@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -10,10 +11,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
+  ExternalLink,
   GraduationCap,
   Laugh,
   LayoutGrid,
-  Loader2,
   Play,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -105,6 +106,21 @@ function getYouTubeId(url: string): string | null {
   return match ? match[1] : null;
 }
 
+const CHANNEL_URL_DELIMITER = "\n[CHANNEL_URL:";
+
+function extractChannelUrl(description: string): string | null {
+  const idx = description.indexOf(CHANNEL_URL_DELIMITER);
+  if (idx === -1) return null;
+  const rest = description.slice(idx + CHANNEL_URL_DELIMITER.length);
+  const url = rest.endsWith("]") ? rest.slice(0, -1) : rest;
+  return url.trim() || null;
+}
+
+function cleanDescription(description: string): string {
+  const idx = description.indexOf(CHANNEL_URL_DELIMITER);
+  return idx === -1 ? description : description.slice(0, idx);
+}
+
 function VideoCard({
   video,
   onClick,
@@ -161,11 +177,29 @@ function VideoCard({
             {video.title}
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-            {video.description}
+            {cleanDescription(video.description)}
           </p>
-          <p className="text-xs text-muted-foreground/60">
+          <p className="text-xs text-muted-foreground/60 mb-2">
             {formatDate(video.uploadedAt)}
           </p>
+          {extractChannelUrl(video.description) && (
+            <a
+              href={extractChannelUrl(video.description)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              data-ocid={`video.channel_link.${index + 1}`}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-7 border-primary/30 text-primary hover:bg-primary/10"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Visit YouTube Channel
+              </Button>
+            </a>
+          )}
         </CardContent>
       </Card>
     </motion.div>
@@ -334,8 +368,25 @@ export default function DashboardPage() {
                       </DialogTitle>
                     </DialogHeader>
                     <p className="text-sm text-muted-foreground mt-2">
-                      {selectedVideo.description}
+                      {cleanDescription(selectedVideo.description)}
                     </p>
+                    {extractChannelUrl(selectedVideo.description) && (
+                      <a
+                        href={extractChannelUrl(selectedVideo.description)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block mt-3"
+                        data-ocid="video.player.channel_link"
+                      >
+                        <Button
+                          variant="outline"
+                          className="gap-2 text-sm border-primary/30 text-primary hover:bg-primary/10"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Visit YouTube Channel
+                        </Button>
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>

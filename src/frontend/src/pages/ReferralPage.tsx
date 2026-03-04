@@ -7,24 +7,49 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
-  ChevronRight,
   Copy,
   IndianRupee,
+  Network,
   Share2,
   TrendingUp,
   Users,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { User } from "../backend.d";
-import { useReferralEarnings } from "../hooks/useQueries";
+import { useReferralEarnings, useWalletDetails } from "../hooks/useQueries";
 import { REFERRAL_LEVELS, paiseToRupees } from "../utils/format";
 
 interface ReferralPageProps {
   user: User;
+}
+
+interface LevelData {
+  level: number;
+  rateRupees: number;
+  membersConfirmed: number;
+  totalEarnedPaise: bigint;
+}
+
+function parseLevel(description: string): number | null {
+  const match = description.match(/level\s+(\d+)/i);
+  if (match) {
+    const lvl = Number.parseInt(match[1], 10);
+    if (lvl >= 1 && lvl <= 15) return lvl;
+  }
+  return null;
 }
 
 export default function ReferralPage({ user }: ReferralPageProps) {
@@ -33,6 +58,9 @@ export default function ReferralPage({ user }: ReferralPageProps) {
 
   const referralLink = `${window.location.origin}/?ref=${user.referralCode}`;
   const { data: totalEarnings } = useReferralEarnings(user.id);
+  const { data: walletDetails, isLoading: isWalletLoading } = useWalletDetails(
+    user.id,
+  );
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -48,23 +76,55 @@ export default function ReferralPage({ user }: ReferralPageProps) {
 
   const shareLink = () => {
     const message = encodeURIComponent(
-      `Join me on Tm11PrimeTime! Pay ₹100 once to access exclusive videos and earn through referrals.\n\nUse my referral link: ${referralLink}`,
+      `🎬 Join *Tm11PrimeTime* — Premium Video Channel!\n\nPay ₹100 once to access exclusive videos and earn through 15-level referrals.\n\n📌 My Referral Code: *${user.referralCode}*\n🔗 Join here: ${referralLink}`,
     );
     window.open(`https://wa.me/?text=${message}`, "_blank");
   };
-
-  const levelColors = [
-    "text-chart-1 bg-chart-1/10 border-chart-1/30",
-    "text-chart-2 bg-chart-2/10 border-chart-2/30",
-    "text-chart-3 bg-chart-3/10 border-chart-3/30",
-    "text-chart-4 bg-chart-4/10 border-chart-4/30",
-    "text-chart-5 bg-chart-5/10 border-chart-5/30",
-  ];
 
   const earningsSummary = Object.entries(REFERRAL_LEVELS).reduce(
     (total, [, amount]) => total + amount,
     0,
   );
+
+  // Build matrix level data from wallet transactions
+  const matrixLevels = useMemo<LevelData[]>(() => {
+    const transactions = walletDetails?.[1] ?? [];
+
+    // Group transactions by level
+    const byLevel: Record<number, { count: number; totalPaise: bigint }> = {};
+    for (const tx of transactions) {
+      const lvl = parseLevel(tx.description);
+      if (lvl !== null) {
+        if (!byLevel[lvl]) byLevel[lvl] = { count: 0, totalPaise: BigInt(0) };
+        byLevel[lvl].count += 1;
+        byLevel[lvl].totalPaise += tx.amount;
+      }
+    }
+
+    return Array.from({ length: 15 }, (_, i) => {
+      const level = i + 1;
+      const data = byLevel[level];
+      return {
+        level,
+        rateRupees: REFERRAL_LEVELS[level] ?? 0.25,
+        membersConfirmed: data?.count ?? 0,
+        totalEarnedPaise: data?.totalPaise ?? BigInt(0),
+      };
+    });
+  }, [walletDetails]);
+
+  const totalMatrixEarnedPaise = useMemo(
+    () => matrixLevels.reduce((acc, l) => acc + l.totalEarnedPaise, BigInt(0)),
+    [matrixLevels],
+  );
+
+  const totalMatrixMembers = useMemo(
+    () => matrixLevels.reduce((acc, l) => acc + l.membersConfirmed, 0),
+    [matrixLevels],
+  );
+
+  // Pyramid visual data (first 6 levels displayed in the matrix structure)
+  const pyramidLevels = [1, 2, 3, 4, 5, 6];
 
   return (
     <div className="space-y-8">
@@ -237,7 +297,7 @@ export default function ReferralPage({ user }: ReferralPageProps) {
         </Card>
       </motion.div>
 
-      {/* Level earnings table */}
+      {/* ── Matrix Level Income ───────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -245,80 +305,284 @@ export default function ReferralPage({ user }: ReferralPageProps) {
       >
         <Card className="bg-card/70 border-border/80 card-glow overflow-hidden">
           <CardHeader>
-            <CardTitle className="font-display text-xl">
-              Earnings Per Level
+            <CardTitle className="font-display text-xl flex items-center gap-2">
+              <Network className="w-5 h-5 text-primary" />
+              Matrix Level Income
             </CardTitle>
             <CardDescription>
-              You earn these amounts when someone registers through your
-              referral network at each level
+              Your downline earnings across all 15 matrix levels — live data
+              from confirmed commissions
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-border">
-              {Object.entries(REFERRAL_LEVELS).map(
-                ([levelStr, amount], idx) => {
-                  const level = Number.parseInt(levelStr);
-                  const colorClass = levelColors[idx % levelColors.length];
-                  const isTopLevel = level <= 3;
-                  return (
-                    <div
-                      key={level}
-                      data-ocid={`referral.level.item.${level}`}
-                      className={cn(
-                        "flex items-center justify-between px-5 py-3.5 hover:bg-accent/30 transition-colors",
-                        isTopLevel ? "bg-primary/3" : "",
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border",
-                            colorClass,
-                          )}
-                        >
-                          {level}
-                        </span>
-                        <div>
-                          <p className="text-sm font-medium">Level {level}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {level === 1
-                              ? "Direct referral"
-                              : `${level} levels down`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "font-display font-bold text-lg",
-                            level === 1 ? "text-primary" : "text-foreground",
-                          )}
-                        >
-                          ₹{amount}
-                        </span>
-                        {isTopLevel && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-primary/20 text-primary"
+
+          {/* Summary chips */}
+          <CardContent className="pb-0">
+            <div className="flex flex-wrap gap-3 mb-5">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/8 border border-primary/20">
+                <Users className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-medium text-primary">
+                  {totalMatrixMembers} total downline members
+                </span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-chart-2/8 border border-chart-2/20">
+                <IndianRupee className="w-3.5 h-3.5 text-chart-2" />
+                <span className="text-xs font-medium text-chart-2">
+                  ₹{paiseToRupees(totalMatrixEarnedPaise)} total matrix earned
+                </span>
+              </div>
+            </div>
+          </CardContent>
+
+          {/* Level table */}
+          <div className="overflow-x-auto">
+            {isWalletLoading ? (
+              <div
+                className="px-6 pb-6 space-y-2"
+                data-ocid="matrix.loading_state"
+              >
+                {Array.from({ length: 6 }).map((_, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton rows use index
+                  <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              <Table data-ocid="matrix.table">
+                <TableHeader>
+                  <TableRow className="border-border/50 hover:bg-transparent">
+                    <TableHead className="text-muted-foreground text-xs font-semibold uppercase tracking-wide pl-6">
+                      Level
+                    </TableHead>
+                    <TableHead className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                      Rate / Member
+                    </TableHead>
+                    <TableHead className="text-muted-foreground text-xs font-semibold uppercase tracking-wide text-center">
+                      Members
+                    </TableHead>
+                    <TableHead className="text-muted-foreground text-xs font-semibold uppercase tracking-wide text-right pr-6">
+                      Total Earned
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {matrixLevels.map((row) => {
+                    const hasMembers = row.membersConfirmed > 0;
+                    const isTopTier = row.level <= 3;
+                    return (
+                      <TableRow
+                        key={row.level}
+                        data-ocid={`matrix.level.row.${row.level}`}
+                        className={cn(
+                          "border-border/30 transition-colors",
+                          hasMembers
+                            ? "hover:bg-primary/5"
+                            : "hover:bg-accent/20 opacity-60",
+                        )}
+                      >
+                        {/* Level badge */}
+                        <TableCell className="pl-6">
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className={cn(
+                                "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border",
+                                hasMembers
+                                  ? "bg-primary/10 border-primary/30 text-primary"
+                                  : "bg-muted/30 border-border/50 text-muted-foreground",
+                              )}
+                            >
+                              {row.level}
+                            </span>
+                            <div>
+                              <p
+                                className={cn(
+                                  "text-sm font-medium",
+                                  hasMembers
+                                    ? "text-foreground"
+                                    : "text-muted-foreground",
+                                )}
+                              >
+                                Level {row.level}
+                              </p>
+                              <p className="text-xs text-muted-foreground/70">
+                                {row.level === 1
+                                  ? "Direct referrals"
+                                  : `${row.level} levels down`}
+                              </p>
+                            </div>
+                            {isTopTier && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-primary/20 text-primary hidden sm:inline-flex"
+                              >
+                                Top Tier
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* Rate per member */}
+                        <TableCell>
+                          <span
+                            className={cn(
+                              "font-display font-bold",
+                              hasMembers
+                                ? "text-primary"
+                                : "text-muted-foreground",
+                            )}
                           >
-                            Top Tier
-                          </Badge>
+                            ₹{row.rateRupees}
+                          </span>
+                        </TableCell>
+
+                        {/* Members confirmed */}
+                        <TableCell className="text-center">
+                          {hasMembers ? (
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                              {row.membersConfirmed}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+
+                        {/* Total earned */}
+                        <TableCell className="text-right pr-6">
+                          {hasMembers ? (
+                            <span className="font-display font-bold text-primary">
+                              ₹{paiseToRupees(row.totalEarnedPaise)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">
+                              ₹0.00
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          {/* Total matrix earnings footer */}
+          {!isWalletLoading && (
+            <div
+              data-ocid="matrix.total.row"
+              className="flex items-center justify-between px-6 py-4 bg-primary/5 border-t border-primary/20"
+            >
+              <div>
+                <p className="font-semibold text-foreground">
+                  Total Matrix Earnings
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {totalMatrixMembers} confirmed members across all levels
+                </p>
+              </div>
+              <span className="font-display font-bold text-2xl text-primary">
+                ₹{paiseToRupees(totalMatrixEarnedPaise)}
+              </span>
+            </div>
+          )}
+        </Card>
+      </motion.div>
+
+      {/* Matrix Structure visual */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Card className="bg-card/70 border-border/80 card-glow overflow-hidden">
+          <CardHeader>
+            <CardTitle className="font-display text-xl flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              Matrix Structure
+            </CardTitle>
+            <CardDescription>
+              How your 15-level downline pyramid grows — each level multiplies
+              your earning potential
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Pyramid visual */}
+            <div className="space-y-2 mb-6">
+              {pyramidLevels.map((lvl) => {
+                const width = Math.round((lvl / 6) * 100);
+                const rate = REFERRAL_LEVELS[lvl];
+                const levelData = matrixLevels.find((l) => l.level === lvl);
+                const hasMembers = (levelData?.membersConfirmed ?? 0) > 0;
+                return (
+                  <div key={lvl} className="flex items-center gap-3">
+                    <span className="w-14 text-right text-xs font-medium text-muted-foreground flex-shrink-0">
+                      L{lvl} ₹{rate}
+                    </span>
+                    <div className="flex-1 relative h-8 flex items-center">
+                      <div
+                        className={cn(
+                          "h-7 rounded-md flex items-center justify-end pr-3 transition-all",
+                          hasMembers
+                            ? "bg-primary/20 border border-primary/30"
+                            : "bg-muted/20 border border-border/30",
+                        )}
+                        style={{ width: `${width}%` }}
+                      >
+                        {hasMembers && (
+                          <span className="text-xs font-bold text-primary">
+                            {levelData?.membersConfirmed}
+                          </span>
                         )}
                       </div>
                     </div>
-                  );
-                },
-              )}
+                    <span className="w-10 text-xs text-muted-foreground flex-shrink-0">
+                      {lvl === 1 ? "direct" : `×${lvl}`}
+                    </span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center gap-3">
+                <span className="w-14 text-right text-xs font-medium text-muted-foreground flex-shrink-0">
+                  L7–15 ₹0.25
+                </span>
+                <div className="flex-1 relative h-8 flex items-center">
+                  <div className="h-7 rounded-md bg-muted/10 border border-border/20 w-full" />
+                </div>
+                <span className="w-10 text-xs text-muted-foreground flex-shrink-0">
+                  deep
+                </span>
+              </div>
             </div>
 
-            {/* Total row */}
-            <div className="flex items-center justify-between px-5 py-4 bg-primary/5 border-t border-primary/20">
-              <span className="font-medium">
-                Maximum Total Earnings Per Chain
-              </span>
-              <span className="font-display font-bold text-xl text-primary">
-                ₹{earningsSummary.toFixed(2)}
-              </span>
+            {/* Rate legend */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {Object.entries(REFERRAL_LEVELS).map(([levelStr, amount]) => {
+                const level = Number.parseInt(levelStr, 10);
+                // Only show levels 1-6 individually; group 7-15
+                if (level > 6) return null;
+                return (
+                  <div
+                    key={level}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-accent/40 border border-border/40"
+                  >
+                    <span className="text-xs text-muted-foreground">
+                      Level {level}
+                    </span>
+                    <span className="text-xs font-bold text-primary">
+                      ₹{amount}
+                    </span>
+                  </div>
+                );
+              })}
+              {/* Grouped L7-15 */}
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-accent/40 border border-border/40">
+                <span className="text-xs text-muted-foreground">
+                  Level 7–15
+                </span>
+                <span className="text-xs font-bold text-muted-foreground">
+                  ₹0.25 each
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -328,7 +592,7 @@ export default function ReferralPage({ user }: ReferralPageProps) {
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.35 }}
       >
         <Card className="bg-card/70 border-border/80 card-glow">
           <CardHeader>

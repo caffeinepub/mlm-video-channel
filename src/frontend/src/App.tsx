@@ -1,14 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { UserRole } from "./backend.d";
+import type { User } from "./backend.d";
 import AppLayout from "./components/AppLayout";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
-import {
-  useCallerProfile,
-  useCallerRole,
-  useUserById,
-} from "./hooks/useQueries";
+import { useCallerProfile, useIsAdmin, useUserById } from "./hooks/useQueries";
 import AdminPage from "./pages/AdminPage";
 import AdminSetupPage from "./pages/AdminSetupPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -25,9 +21,13 @@ export default function App() {
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
 
   const { data: profile, isLoading: profileLoading } = useCallerProfile();
-  const { data: role } = useCallerRole();
+  const { data: isAdminData, isLoading: isAdminLoading } = useIsAdmin();
 
   const isAdminSetupPage = window.location.pathname === "/admin-setup";
+
+  // Use ONLY isCallerAdmin() -- getCallerUserRole() returns #guest for admin-only
+  // identities so it cannot be trusted for admin detection
+  const isAdmin = !isAdminLoading && isAdminData === true;
 
   // Check URL for admin route
   useEffect(() => {
@@ -39,8 +39,13 @@ export default function App() {
   const userId = profile?.userId ?? null;
   const { data: user, isLoading: userLoading } = useUserById(userId);
 
+  // Wait for identity + admin checks. For users, also wait for their profile/user data.
   const rawLoading =
-    isInitializing || profileLoading || (!!profile && userLoading);
+    isInitializing ||
+    isAdminLoading ||
+    // Only wait for profile once actor is ready (not during identity init)
+    (!isInitializing && profileLoading) ||
+    (!!profile && userLoading);
 
   // Safety timeout: if loading takes more than 6 seconds, force past it
   useEffect(() => {
@@ -48,7 +53,7 @@ export default function App() {
       setLoadingTimedOut(false);
       return;
     }
-    const timer = setTimeout(() => setLoadingTimedOut(true), 6000);
+    const timer = setTimeout(() => setLoadingTimedOut(true), 10000);
     return () => clearTimeout(timer);
   }, [rawLoading]);
 
@@ -90,6 +95,43 @@ export default function App() {
     );
   }
 
+  // Admin identity (no user profile needed)
+  if (isAdmin) {
+    const adminUser: User = user ?? {
+      id: BigInt(0),
+      name: "Admin",
+      mobile: "",
+      upiId: "",
+      referralCode: "",
+      registrationStatus: "confirmed",
+      walletBalance: BigInt(0),
+      createdAt: BigInt(0),
+      ancestors: [],
+    };
+    // Default admin to "admin" page
+    const adminPage =
+      currentPage === "admin" ||
+      !["dashboard", "referrals", "wallet"].includes(currentPage)
+        ? "admin"
+        : currentPage;
+    return (
+      <>
+        <AppLayout
+          currentPage={adminPage as AppPage}
+          onNavigate={setCurrentPage}
+          user={adminUser}
+          isAdmin={true}
+        >
+          {adminPage === "admin" && <AdminPage />}
+          {adminPage === "dashboard" && <DashboardPage />}
+          {adminPage === "referrals" && <ReferralPage user={adminUser} />}
+          {adminPage === "wallet" && <WalletPage user={adminUser} />}
+        </AppLayout>
+        <Toaster />
+      </>
+    );
+  }
+
   // Logged in but no profile: show registration
   if (!profile) {
     return (
@@ -125,23 +167,6 @@ export default function App() {
     );
   }
 
-  // Admin route
-  if (currentPage === "admin" && role === UserRole.admin) {
-    return (
-      <>
-        <AppLayout
-          currentPage={currentPage}
-          onNavigate={setCurrentPage}
-          user={user}
-          isAdmin={role === UserRole.admin}
-        >
-          <AdminPage />
-        </AppLayout>
-        <Toaster />
-      </>
-    );
-  }
-
   // Confirmed member
   return (
     <>
@@ -149,12 +174,11 @@ export default function App() {
         currentPage={currentPage}
         onNavigate={setCurrentPage}
         user={user}
-        isAdmin={role === UserRole.admin}
+        isAdmin={false}
       >
         {currentPage === "dashboard" && <DashboardPage />}
         {currentPage === "referrals" && <ReferralPage user={user} />}
         {currentPage === "wallet" && <WalletPage user={user} />}
-        {currentPage === "admin" && role === UserRole.admin && <AdminPage />}
       </AppLayout>
       <Toaster />
     </>

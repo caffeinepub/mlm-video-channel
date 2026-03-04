@@ -56,6 +56,7 @@ export enum UserRole {
 }
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    claimFirstAdmin(): Promise<boolean>;
     confirmPayment(userId: bigint): Promise<void>;
     deleteVideo(videoId: bigint): Promise<void>;
     editVideo(videoId: bigint, title: string, description: string, category: string, videoUrl: string, thumbnailUrl: string): Promise<void>;
@@ -74,8 +75,9 @@ export interface backendInterface {
     isCallerAdmin(): Promise<boolean>;
     processWithdrawalRequest(requestId: bigint, approve: boolean): Promise<void>;
     registerUser(name: string, mobile: string, upiId: string, referralCode: string | null): Promise<string>;
+    removeUser(userId: bigint): Promise<void>;
     requestWithdrawal(userId: bigint, amount: bigint): Promise<bigint>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    submitUTR(utrId: string): Promise<void>;
+    submitUTR(utrId: string, name: string, mobile: string): Promise<void>;
     uploadVideo(title: string, description: string, category: string, videoUrl: string, thumbnailUrl: string): Promise<bigint>;
 }

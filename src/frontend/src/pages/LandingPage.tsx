@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Copy,
   Loader2,
+  PlayCircle,
   PlaySquare,
   Shield,
   Star,
@@ -33,6 +34,25 @@ import {
   REFERRAL_LEVELS,
   getUpiDeepLinks,
 } from "../utils/format";
+
+const UPI_LOGOS: Record<string, { src: string; alt: string }> = {
+  PhonePe: {
+    src: "/assets/generated/logo-phonepe-transparent.dim_120x120.png",
+    alt: "PhonePe",
+  },
+  GPay: {
+    src: "/assets/generated/logo-gpay-transparent.dim_120x120.png",
+    alt: "Google Pay",
+  },
+  Paytm: {
+    src: "/assets/generated/logo-paytm-transparent.dim_120x120.png",
+    alt: "Paytm",
+  },
+  BHIM: {
+    src: "/assets/generated/logo-bhim-transparent.dim_120x120.png",
+    alt: "BHIM UPI",
+  },
+};
 
 interface LandingPageProps {
   showRegistration?: boolean;
@@ -91,12 +111,6 @@ export default function LandingPage({
         upiId: form.upiId,
         referralCode: form.referralCode || null,
       });
-      // Save profile so we can identify user on next load
-      if (identity) {
-        // We need the userId - but registerUser only returns referralCode
-        // Save profile with name - userId will be resolved when we fetch user by referral code
-        // The backend should auto-link profile on register
-      }
       setNewReferralCode(code);
       setFormStep("payment");
       toast.success("Registration submitted! Complete payment to activate.");
@@ -138,21 +152,27 @@ export default function LandingPage({
   ];
 
   return (
-    <div className="min-h-screen hero-gradient pattern-bg relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-chart-3/5 blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/3 blur-[100px]" />
-      </div>
+    <div className="min-h-screen bg-black relative overflow-hidden">
+      {/* Cinematic Hero Background */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage:
+            "url('/assets/generated/hero-cinematic-bg.dim_1200x800.jpg')",
+        }}
+      />
+      {/* Dark overlay for readability */}
+      <div className="absolute inset-0 bg-black/55" />
+      {/* Gradient overlay bottom */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/80" />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-20">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <motion.header
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="flex items-center justify-between mb-16"
+          className="flex items-center justify-between py-5"
         >
           <div className="flex items-center gap-3">
             <img
@@ -171,7 +191,7 @@ export default function LandingPage({
               variant="outline"
               size="sm"
               data-ocid="landing.login.button"
-              className="border-primary/30 text-primary hover:bg-primary/10 gap-2"
+              className="border-white/30 text-white hover:bg-white/10 gap-2 bg-black/30 backdrop-blur-sm"
             >
               {isLoggingIn ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -187,22 +207,27 @@ export default function LandingPage({
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-center mb-20"
+            className="text-center pt-16 pb-8 min-h-[70vh] flex flex-col items-center justify-center"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
-              <Star className="w-3.5 h-3.5" />
-              Exclusive Members-Only Platform
+            {/* Premium badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-sm font-semibold mb-8">
+              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              Premium Membership Channel
             </div>
 
-            <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight mb-6">
-              <span className="text-foreground">Learn. Earn.</span>
+            {/* Main heading - matching screenshot style */}
+            <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 tracking-tight">
+              <span className="gold-gradient-text">Exclusive Video</span>
               <br />
-              <span className="gold-gradient-text">Grow Together.</span>
+              <span className="text-white">Content</span>
+              <br />
+              <span className="text-white">For Members Only</span>
             </h1>
 
-            <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-              Pay a one-time ₹100 registration fee. Get access to exclusive
-              video content and earn through our 15-level referral network.
+            <p className="text-white/70 text-base sm:text-lg max-w-xl mx-auto mb-10 leading-relaxed">
+              Join our premium video channel with a one-time ₹100 registration
+              fee. Earn rewards by referring friends and unlock exclusive
+              content.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -211,10 +236,10 @@ export default function LandingPage({
                   size="lg"
                   onClick={() => setShowRegForm(true)}
                   data-ocid="landing.register.primary_button"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold px-8 py-6 text-base gap-2 shadow-gold"
+                  className="bg-amber-500 hover:bg-amber-400 text-black font-bold px-10 py-6 text-base gap-2 rounded-full shadow-lg"
                 >
-                  Complete Registration
-                  <ChevronRight className="w-5 h-5" />
+                  <PlayCircle className="w-5 h-5" />
+                  Watch Videos
                 </Button>
               ) : (
                 <Button
@@ -222,14 +247,14 @@ export default function LandingPage({
                   onClick={login}
                   disabled={isLoggingIn}
                   data-ocid="landing.get_started.primary_button"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold px-8 py-6 text-base gap-2 shadow-gold"
+                  className="bg-amber-500 hover:bg-amber-400 text-black font-bold px-10 py-6 text-base gap-2 rounded-full shadow-lg"
                 >
                   {isLoggingIn ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <PlaySquare className="w-5 h-5" />
+                    <PlayCircle className="w-5 h-5" />
                   )}
-                  Get Started — ₹100 Only
+                  Watch Videos
                 </Button>
               )}
               <Button
@@ -237,52 +262,66 @@ export default function LandingPage({
                 variant="outline"
                 onClick={() => setShowRegForm(true)}
                 data-ocid="landing.register.secondary_button"
-                className="border-border text-muted-foreground hover:text-foreground hover:border-primary/40 px-8 py-6 text-base"
+                className="border-white/30 text-white hover:text-white hover:border-white/60 bg-white/5 backdrop-blur-sm px-8 py-6 text-base rounded-full"
               >
-                Register Now
+                Register Now — ₹100 Only
               </Button>
             </div>
 
-            {/* Earnings preview */}
+            {/* Stats bar */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="mt-14 inline-flex items-center gap-6 px-6 py-3 rounded-2xl bg-card/60 border border-border gold-border backdrop-blur-sm"
+              className="mt-14 inline-flex items-center gap-6 px-6 py-3 rounded-2xl bg-black/50 border border-white/10 backdrop-blur-md"
             >
               <div className="text-center">
-                <div className="text-2xl font-display font-bold text-primary">
+                <div className="text-2xl font-display font-bold text-amber-400">
                   ₹10
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Per L1 Referral
-                </div>
+                <div className="text-xs text-white/50">Per L1 Referral</div>
               </div>
-              <div className="w-px h-8 bg-border" />
+              <div className="w-px h-8 bg-white/10" />
               <div className="text-center">
-                <div className="text-2xl font-display font-bold text-primary">
+                <div className="text-2xl font-display font-bold text-amber-400">
                   15
                 </div>
-                <div className="text-xs text-muted-foreground">Levels Deep</div>
+                <div className="text-xs text-white/50">Levels Deep</div>
               </div>
-              <div className="w-px h-8 bg-border" />
+              <div className="w-px h-8 bg-white/10" />
               <div className="text-center">
-                <div className="text-2xl font-display font-bold text-primary">
+                <div className="text-2xl font-display font-bold text-amber-400">
                   ₹500
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Min Withdrawal
-                </div>
+                <div className="text-xs text-white/50">Min Withdrawal</div>
               </div>
-              <div className="w-px h-8 bg-border" />
+              <div className="w-px h-8 bg-white/10" />
               <div className="flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4 text-success" />
-                <span className="text-sm text-muted-foreground">
-                  Unlimited Earning Potential
+                <TrendingUp className="w-4 h-4 text-green-400" />
+                <span className="text-sm text-white/60 hidden sm:inline">
+                  Unlimited Earning
                 </span>
               </div>
             </motion.div>
           </motion.section>
+        )}
+
+        {/* Why Join section heading */}
+        {!showRegForm && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-center mb-8 mt-4"
+          >
+            <h2 className="font-display text-3xl font-bold text-white mb-2">
+              Why Join <span className="gold-gradient-text">Tm11PrimeTime</span>
+              ?
+            </h2>
+            <p className="text-white/50 text-sm">
+              Everything you need to earn and learn
+            </p>
+          </motion.div>
         )}
 
         {/* Features Grid */}
@@ -291,7 +330,7 @@ export default function LandingPage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-20"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-16"
           >
             {features.map((f, i) => {
               const Icon = f.icon;
@@ -302,15 +341,15 @@ export default function LandingPage({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + i * 0.08 }}
                 >
-                  <Card className="bg-card/60 border-border/80 card-glow card-glow-hover h-full">
+                  <Card className="bg-black/50 border-white/10 backdrop-blur-md h-full hover:border-amber-400/30 transition-colors">
                     <CardContent className="p-5">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-3">
-                        <Icon className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-400/20 flex items-center justify-center mb-3">
+                        <Icon className="w-5 h-5 text-amber-400" />
                       </div>
-                      <h3 className="font-display font-semibold text-sm mb-1">
+                      <h3 className="font-display font-semibold text-sm mb-1 text-white">
                         {f.title}
                       </h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
+                      <p className="text-xs text-white/50 leading-relaxed">
                         {f.desc}
                       </p>
                     </CardContent>
@@ -329,33 +368,33 @@ export default function LandingPage({
             transition={{ delay: 0.5 }}
             className="mb-20"
           >
-            <Card className="bg-card/60 border-border/80 card-glow overflow-hidden">
-              <CardHeader className="border-b border-border pb-4">
-                <CardTitle className="font-display text-xl">
+            <Card className="bg-black/50 border-white/10 backdrop-blur-md overflow-hidden">
+              <CardHeader className="border-b border-white/10 pb-4">
+                <CardTitle className="font-display text-xl text-white">
                   15-Level Referral Earnings
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-white/50">
                   Earn ₹ rewards when members you refer (directly or indirectly)
                   join the platform
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="grid grid-cols-3 sm:grid-cols-5 divide-x divide-border">
+                <div className="grid grid-cols-3 sm:grid-cols-5 divide-x divide-white/10">
                   {Object.entries(REFERRAL_LEVELS).map(([level, amount]) => (
                     <div
                       key={level}
                       className={cn(
-                        "p-4 text-center border-b border-border",
-                        level === "1" ? "bg-primary/5" : "",
+                        "p-4 text-center border-b border-white/10",
+                        level === "1" ? "bg-amber-500/10" : "",
                       )}
                     >
-                      <div className="text-xs text-muted-foreground mb-1">
+                      <div className="text-xs text-white/40 mb-1">
                         Level {level}
                       </div>
                       <div
                         className={cn(
                           "font-display font-bold text-lg",
-                          level === "1" ? "text-primary" : "text-foreground",
+                          level === "1" ? "text-amber-400" : "text-white",
                         )}
                       >
                         ₹{amount}
@@ -377,10 +416,10 @@ export default function LandingPage({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
               transition={{ duration: 0.35 }}
-              className="max-w-lg mx-auto"
+              className="max-w-lg mx-auto py-8"
             >
               {formStep === "form" ? (
-                <Card className="bg-card/80 border-border card-glow backdrop-blur-sm">
+                <Card className="bg-black/70 border-white/10 backdrop-blur-md">
                   <CardHeader>
                     <div className="flex items-center gap-3 mb-2">
                       <img
@@ -389,10 +428,10 @@ export default function LandingPage({
                         className="w-10 h-10 rounded-xl"
                       />
                       <div>
-                        <CardTitle className="font-display text-xl">
+                        <CardTitle className="font-display text-xl text-white">
                           Join Tm11PrimeTime
                         </CardTitle>
-                        <CardDescription>
+                        <CardDescription className="text-white/50">
                           Pay ₹100 once to unlock everything
                         </CardDescription>
                       </div>
@@ -401,7 +440,10 @@ export default function LandingPage({
                   <CardContent className="space-y-4">
                     {/* Name */}
                     <div className="space-y-1.5">
-                      <Label htmlFor="reg-name" className="text-sm">
+                      <Label
+                        htmlFor="reg-name"
+                        className="text-sm text-white/70"
+                      >
                         Full Name
                       </Label>
                       <Input
@@ -412,7 +454,10 @@ export default function LandingPage({
                           setForm((f) => ({ ...f, name: e.target.value }))
                         }
                         data-ocid="register.name.input"
-                        className={cn(errors.name && "border-destructive")}
+                        className={cn(
+                          "bg-white/5 border-white/10 text-white placeholder:text-white/30",
+                          errors.name && "border-destructive",
+                        )}
                       />
                       {errors.name && (
                         <p
@@ -426,7 +471,10 @@ export default function LandingPage({
 
                     {/* Mobile */}
                     <div className="space-y-1.5">
-                      <Label htmlFor="reg-mobile" className="text-sm">
+                      <Label
+                        htmlFor="reg-mobile"
+                        className="text-sm text-white/70"
+                      >
                         Mobile Number
                       </Label>
                       <Input
@@ -438,7 +486,10 @@ export default function LandingPage({
                         }
                         data-ocid="register.mobile.input"
                         maxLength={10}
-                        className={cn(errors.mobile && "border-destructive")}
+                        className={cn(
+                          "bg-white/5 border-white/10 text-white placeholder:text-white/30",
+                          errors.mobile && "border-destructive",
+                        )}
                       />
                       {errors.mobile && (
                         <p
@@ -452,7 +503,10 @@ export default function LandingPage({
 
                     {/* UPI ID */}
                     <div className="space-y-1.5">
-                      <Label htmlFor="reg-upi" className="text-sm">
+                      <Label
+                        htmlFor="reg-upi"
+                        className="text-sm text-white/70"
+                      >
                         Your UPI ID
                       </Label>
                       <Input
@@ -463,7 +517,10 @@ export default function LandingPage({
                           setForm((f) => ({ ...f, upiId: e.target.value }))
                         }
                         data-ocid="register.upi_id.input"
-                        className={cn(errors.upiId && "border-destructive")}
+                        className={cn(
+                          "bg-white/5 border-white/10 text-white placeholder:text-white/30",
+                          errors.upiId && "border-destructive",
+                        )}
                       />
                       {errors.upiId && (
                         <p
@@ -477,11 +534,12 @@ export default function LandingPage({
 
                     {/* Referral Code */}
                     <div className="space-y-1.5">
-                      <Label htmlFor="reg-referral" className="text-sm">
+                      <Label
+                        htmlFor="reg-referral"
+                        className="text-sm text-white/70"
+                      >
                         Referral Code{" "}
-                        <span className="text-muted-foreground">
-                          (Optional)
-                        </span>
+                        <span className="text-white/30">(Optional)</span>
                       </Label>
                       <Input
                         id="reg-referral"
@@ -494,22 +552,21 @@ export default function LandingPage({
                           }))
                         }
                         data-ocid="register.referral_code.input"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
                       />
                     </div>
 
                     {/* Login option */}
                     {!identity && (
-                      <div className="rounded-xl bg-accent/50 border border-border p-4 text-sm">
-                        <p className="text-muted-foreground mb-2">
-                          Already a member?
-                        </p>
+                      <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-sm">
+                        <p className="text-white/50 mb-2">Already a member?</p>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={login}
                           disabled={isLoggingIn}
                           data-ocid="register.login.button"
-                          className="border-primary/30 text-primary gap-2"
+                          className="border-amber-400/30 text-amber-400 gap-2 bg-transparent"
                         >
                           {isLoggingIn ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -521,7 +578,7 @@ export default function LandingPage({
 
                     {identity ? (
                       <Button
-                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold py-5 shadow-gold"
+                        className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-5"
                         onClick={handleRegister}
                         disabled={registerMutation.isPending}
                         data-ocid="register.submit.button"
@@ -533,7 +590,7 @@ export default function LandingPage({
                       </Button>
                     ) : (
                       <Button
-                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold py-5 shadow-gold"
+                        className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-5"
                         onClick={login}
                         disabled={isLoggingIn}
                         data-ocid="register.login_to_proceed.button"
@@ -545,7 +602,7 @@ export default function LandingPage({
                       </Button>
                     )}
 
-                    <p className="text-xs text-muted-foreground text-center">
+                    <p className="text-xs text-white/30 text-center">
                       By registering you agree to pay ₹100 registration fee via
                       UPI
                     </p>
@@ -553,28 +610,28 @@ export default function LandingPage({
                 </Card>
               ) : (
                 /* Payment Step */
-                <Card className="bg-card/80 border-border card-glow backdrop-blur-sm">
+                <Card className="bg-black/70 border-white/10 backdrop-blur-md">
                   <CardHeader>
                     <div className="flex items-center gap-2 mb-1">
-                      <CheckCircle2 className="w-5 h-5 text-success" />
-                      <CardTitle className="font-display text-xl">
+                      <CheckCircle2 className="w-5 h-5 text-green-400" />
+                      <CardTitle className="font-display text-xl text-white">
                         Registration Submitted!
                       </CardTitle>
                     </div>
-                    <CardDescription>
+                    <CardDescription className="text-white/50">
                       Complete the ₹100 payment to activate your account
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {newReferralCode && (
-                      <div className="rounded-xl bg-primary/5 border border-primary/20 p-4">
-                        <p className="text-xs text-muted-foreground mb-1">
+                      <div className="rounded-xl bg-amber-500/10 border border-amber-400/20 p-4">
+                        <p className="text-xs text-white/50 mb-1">
                           Your Referral Code
                         </p>
-                        <p className="font-mono-custom font-bold text-primary text-lg">
+                        <p className="font-mono-custom font-bold text-amber-400 text-lg">
                           {newReferralCode}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-white/40 mt-1">
                           Save this for sharing
                         </p>
                       </div>
@@ -582,12 +639,14 @@ export default function LandingPage({
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Pay to UPI ID</p>
+                        <p className="text-sm font-medium text-white">
+                          Pay to UPI ID
+                        </p>
                         <button
                           type="button"
                           onClick={copyUpiId}
                           data-ocid="payment.copy_upi.button"
-                          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80"
+                          className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300"
                         >
                           {copiedUpi ? (
                             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -597,13 +656,13 @@ export default function LandingPage({
                           {copiedUpi ? "Copied!" : "Copy"}
                         </button>
                       </div>
-                      <div className="font-mono-custom text-lg font-bold p-3 rounded-lg bg-accent border border-border">
+                      <div className="font-mono-custom text-sm font-bold p-3 rounded-lg bg-white/5 border border-white/10 text-white">
                         {ADMIN_UPI_ID}
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-sm font-medium mb-3">
+                      <p className="text-sm font-medium mb-3 text-white">
                         Pay directly via app
                       </p>
                       <div className="grid grid-cols-2 gap-3">
@@ -612,26 +671,22 @@ export default function LandingPage({
                             key={name}
                             href={link}
                             data-ocid={`payment.${name.toLowerCase()}.button`}
-                            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-secondary border border-border hover:border-primary/30 hover:bg-accent transition-all font-medium text-sm"
+                            className="flex items-center justify-center gap-2 py-3 px-2 rounded-xl bg-white/5 border border-white/10 hover:border-amber-400/30 hover:bg-white/10 transition-all font-medium text-sm text-white"
                           >
-                            <span className="text-base">
-                              {name === "PhonePe"
-                                ? "💜"
-                                : name === "GPay"
-                                  ? "🔵"
-                                  : name === "Paytm"
-                                    ? "🔷"
-                                    : "🇮🇳"}
-                            </span>
+                            <img
+                              src={UPI_LOGOS[name]?.src}
+                              alt={UPI_LOGOS[name]?.alt ?? name}
+                              className="w-6 h-6 object-contain rounded"
+                            />
                             {name}
                           </a>
                         ))}
                       </div>
                     </div>
 
-                    <div className="rounded-xl bg-warning/10 border border-warning/20 p-4 text-sm text-warning">
-                      <p className="font-medium mb-1">⚠️ Important</p>
-                      <p className="text-warning/80">
+                    <div className="rounded-xl bg-amber-500/10 border border-amber-400/20 p-4 text-sm text-amber-300">
+                      <p className="font-medium mb-1">Important</p>
+                      <p className="text-amber-300/70">
                         Your account will be activated after admin confirms your
                         ₹100 payment. This may take a few hours.
                       </p>
@@ -639,7 +694,7 @@ export default function LandingPage({
 
                     <Button
                       variant="outline"
-                      className="w-full"
+                      className="w-full border-white/10 text-white hover:bg-white/5"
                       onClick={() => setFormStep("form")}
                       data-ocid="payment.back.button"
                     >
@@ -653,7 +708,7 @@ export default function LandingPage({
               <button
                 type="button"
                 onClick={() => setShowRegForm(false)}
-                className="block mt-4 text-sm text-muted-foreground hover:text-foreground mx-auto"
+                className="block mt-4 text-sm text-white/40 hover:text-white/70 mx-auto"
                 data-ocid="register.back_to_home.button"
               >
                 ← Back to home
@@ -664,14 +719,14 @@ export default function LandingPage({
       </div>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-border/50 py-6">
-        <p className="text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()}. Built with ❤️ using{" "}
+      <footer className="relative z-10 border-t border-white/10 py-6 mt-8">
+        <p className="text-center text-sm text-white/30">
+          © {new Date().getFullYear()} Tm11PrimeTime. Built with ❤️ using{" "}
           <a
             href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary hover:underline"
+            className="text-amber-400/70 hover:text-amber-400"
           >
             caffeine.ai
           </a>

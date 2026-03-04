@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,8 @@ import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
   Clock,
+  ExternalLink,
+  Info,
   Loader2,
   Pencil,
   Plus,
@@ -65,6 +68,7 @@ import {
   usePendingWithdrawals,
   useProcessWithdrawal,
   useProcessedWithdrawals,
+  useRemoveUser,
   useUploadVideo,
 } from "../hooks/useQueries";
 import { formatDate, formatDateTime, paiseToRupees } from "../utils/format";
@@ -78,6 +82,16 @@ function UsersTab() {
   >("all");
   const { data: users = [], isLoading } = useAllUsers();
   const confirmMutation = useConfirmPayment();
+  const removeMutation = useRemoveUser();
+
+  // Local rejection state — session-only (no backend reject endpoint)
+  const [rejectedIds, setRejectedIds] = useState<Set<string>>(new Set());
+
+  // Payment detail modal state
+  const [detailUser, setDetailUser] = useState<User | null>(null);
+
+  // Remove confirmation state
+  const [removeTarget, setRemoveTarget] = useState<User | null>(null);
 
   const filtered = users.filter((u) => {
     const matchSearch =
@@ -95,6 +109,24 @@ function UsersTab() {
       toast.success(`Payment confirmed for ${name}`);
     } catch {
       toast.error("Failed to confirm payment");
+    }
+  };
+
+  const handleReject = (userId: bigint, name: string) => {
+    setRejectedIds((prev) => new Set(prev).add(userId.toString()));
+    toast.error(`User ${name} rejected`);
+  };
+
+  const handleRemove = async () => {
+    if (!removeTarget) return;
+    try {
+      await removeMutation.mutateAsync(removeTarget.id);
+      toast.success(`User ${removeTarget.name} removed`);
+      setRemoveTarget(null);
+      // Close detail modal if the removed user was open
+      if (detailUser?.id === removeTarget.id) setDetailUser(null);
+    } catch {
+      toast.error("Failed to remove user");
     }
   };
 
@@ -196,6 +228,9 @@ function UsersTab() {
                     Status
                   </th>
                   <th className="text-left px-4 py-3 text-muted-foreground font-medium hidden md:table-cell">
+                    Amount
+                  </th>
+                  <th className="text-left px-4 py-3 text-muted-foreground font-medium hidden md:table-cell">
                     Balance
                   </th>
                   <th className="text-left px-4 py-3 text-muted-foreground font-medium hidden lg:table-cell">
@@ -207,84 +242,353 @@ function UsersTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.map((u, idx) => (
-                  <tr
-                    key={u.id.toString()}
-                    data-ocid={`admin.users.item.${idx + 1}`}
-                    className="hover:bg-accent/30 transition-colors"
-                  >
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {idx + 1}
-                    </td>
-                    <td className="px-4 py-3 font-medium">{u.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell font-mono-custom text-xs">
-                      {u.mobile}
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      {u.utrId ? (
-                        <span className="font-mono-custom text-xs bg-primary/5 text-primary px-2 py-0.5 rounded border border-primary/10">
-                          {u.utrId}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell font-mono-custom text-xs">
-                      {u.upiId}
-                    </td>
-                    <td className="px-4 py-3 hidden sm:table-cell">
-                      <code className="font-mono-custom text-xs bg-primary/5 text-primary px-2 py-0.5 rounded">
-                        {u.referralCode}
-                      </code>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "text-xs px-2.5 py-1 rounded-full font-medium",
-                          u.registrationStatus === "confirmed"
-                            ? "status-confirmed"
-                            : "status-pending",
+                {filtered.map((u, idx) => {
+                  const isRejected = rejectedIds.has(u.id.toString());
+                  return (
+                    <tr
+                      key={u.id.toString()}
+                      data-ocid={`admin.users.item.${idx + 1}`}
+                      className="hover:bg-accent/30 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {idx + 1}
+                      </td>
+                      <td className="px-4 py-3 font-medium">{u.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell font-mono-custom text-xs">
+                        {u.mobile}
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {u.utrId ? (
+                          <span className="font-mono-custom text-xs bg-primary/5 text-primary px-2 py-0.5 rounded border border-primary/10">
+                            {u.utrId}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">
+                            —
+                          </span>
                         )}
-                      >
-                        {u.registrationStatus}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      ₹{paiseToRupees(u.walletBalance)}
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-xs">
-                      {formatDate(u.createdAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {u.registrationStatus === "pending" && (
-                        <Button
-                          size="sm"
-                          className="bg-success/10 text-success hover:bg-success/20 border border-success/30 gap-1 text-xs"
-                          onClick={() => handleConfirm(u.id, u.name)}
-                          disabled={confirmMutation.isPending}
-                          data-ocid={`admin.users.confirm.button.${idx + 1}`}
-                        >
-                          {confirmMutation.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="w-3 h-3" />
-                          )}
-                          Confirm
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell font-mono-custom text-xs">
+                        {u.upiId}
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell">
+                        <code className="font-mono-custom text-xs bg-primary/5 text-primary px-2 py-0.5 rounded">
+                          {u.referralCode}
+                        </code>
+                      </td>
+                      <td className="px-4 py-3">
+                        {isRejected ? (
+                          <span className="text-xs px-2.5 py-1 rounded-full font-medium status-rejected">
+                            Rejected
+                          </span>
+                        ) : (
+                          <span
+                            className={cn(
+                              "text-xs px-2.5 py-1 rounded-full font-medium",
+                              u.registrationStatus === "confirmed"
+                                ? "status-confirmed"
+                                : "status-pending",
+                            )}
+                          >
+                            {u.registrationStatus}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell font-medium text-primary">
+                        ₹100
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        ₹{paiseToRupees(u.walletBalance)}
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-xs">
+                        {formatDate(u.createdAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          {/* Info button — always visible */}
+                          <button
+                            type="button"
+                            onClick={() => setDetailUser(u)}
+                            data-ocid={`admin.users.info.button.${idx + 1}`}
+                            className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-all"
+                            title="View payment details"
+                          >
+                            <Info className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Confirm / Reject — only for pending & not yet rejected */}
+                          {u.registrationStatus === "pending" &&
+                            !isRejected && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="bg-success/10 text-success hover:bg-success/20 border border-success/30 gap-1 text-xs"
+                                  onClick={() => handleConfirm(u.id, u.name)}
+                                  disabled={confirmMutation.isPending}
+                                  data-ocid={`admin.users.confirm.button.${idx + 1}`}
+                                >
+                                  {confirmMutation.isPending ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="w-3 h-3" />
+                                  )}
+                                  Confirm
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-destructive/30 text-destructive hover:bg-destructive/10 gap-1 text-xs"
+                                  onClick={() => handleReject(u.id, u.name)}
+                                  data-ocid={`admin.users.reject.button.${idx + 1}`}
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  Reject
+                                </Button>
+                              </>
+                            )}
+
+                          {/* Remove — always visible, permanently deletes user */}
+                          <button
+                            type="button"
+                            onClick={() => setRemoveTarget(u)}
+                            data-ocid={`admin.users.remove.button.${idx + 1}`}
+                            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                            title="Remove user permanently"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </Card>
+
+      {/* Remove User Confirmation */}
+      <AlertDialog
+        open={!!removeTarget}
+        onOpenChange={(o) => !o && setRemoveTarget(null)}
+      >
+        <AlertDialogContent
+          className="bg-card border-border"
+          data-ocid="admin.users.remove.dialog"
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove User?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently remove{" "}
+              <strong>{removeTarget?.name}</strong>? This will delete their
+              account, wallet, and all associated data. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-ocid="admin.users.remove.cancel_button">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemove}
+              disabled={removeMutation.isPending}
+              data-ocid="admin.users.remove.confirm_button"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removeMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              Remove User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Payment Detail Modal */}
+      <Dialog
+        open={!!detailUser}
+        onOpenChange={(o) => !o && setDetailUser(null)}
+      >
+        <DialogContent
+          className="bg-card border-border max-w-md"
+          data-ocid="admin.users.detail.dialog"
+        >
+          {detailUser && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display text-lg">
+                  Payment Details — {detailUser.name}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                {/* UTR highlighted */}
+                <div className="rounded-xl bg-primary/5 border border-primary/20 p-4">
+                  <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">
+                    UTR / Transaction ID
+                  </p>
+                  <p className="font-mono-custom text-base font-bold text-primary">
+                    {detailUser.utrId || "— Not submitted yet"}
+                  </p>
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Full Name
+                    </p>
+                    <p className="font-medium">{detailUser.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Mobile Number
+                    </p>
+                    <p className="font-mono-custom font-medium">
+                      {detailUser.mobile}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      UPI ID
+                    </p>
+                    <p className="font-mono-custom text-xs break-all">
+                      {detailUser.upiId || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Registration Amount
+                    </p>
+                    <p className="font-display font-bold text-primary text-lg">
+                      ₹100
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Registration Status
+                    </p>
+                    <span
+                      className={cn(
+                        "text-xs px-2.5 py-1 rounded-full font-medium",
+                        rejectedIds.has(detailUser.id.toString())
+                          ? "status-rejected"
+                          : detailUser.registrationStatus === "confirmed"
+                            ? "status-confirmed"
+                            : "status-pending",
+                      )}
+                    >
+                      {rejectedIds.has(detailUser.id.toString())
+                        ? "Rejected"
+                        : detailUser.registrationStatus}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Date Joined
+                    </p>
+                    <p className="text-xs">
+                      {formatDate(detailUser.createdAt)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Referral Code
+                    </p>
+                    <code className="font-mono-custom text-xs bg-primary/5 text-primary px-2 py-0.5 rounded">
+                      {detailUser.referralCode}
+                    </code>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Wallet Balance
+                    </p>
+                    <p className="font-medium">
+                      ₹{paiseToRupees(detailUser.walletBalance)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick actions */}
+                <Separator />
+                <div className="space-y-2">
+                  {detailUser.registrationStatus === "pending" &&
+                    !rejectedIds.has(detailUser.id.toString()) && (
+                      <div className="flex gap-2">
+                        <Button
+                          className="flex-1 bg-success/10 text-success hover:bg-success/20 border border-success/30 gap-1.5"
+                          onClick={() => {
+                            handleConfirm(detailUser.id, detailUser.name);
+                            setDetailUser(null);
+                          }}
+                          disabled={confirmMutation.isPending}
+                          data-ocid="admin.users.detail.confirm_button"
+                        >
+                          {confirmMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4" />
+                          )}
+                          Confirm Payment
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10 gap-1.5"
+                          onClick={() => {
+                            handleReject(detailUser.id, detailUser.name);
+                            setDetailUser(null);
+                          }}
+                          data-ocid="admin.users.detail.reject_button"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Reject
+                        </Button>
+                      </div>
+                    )}
+                  {/* Remove — always visible */}
+                  <Button
+                    variant="outline"
+                    className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 gap-1.5"
+                    onClick={() => {
+                      setRemoveTarget(detailUser);
+                      setDetailUser(null);
+                    }}
+                    data-ocid="admin.users.detail.delete_button"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Remove User Permanently
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 // ─── Videos Tab ───────────────────────────────────────────────────────────
+
+const CHANNEL_URL_DELIMITER = "\n[CHANNEL_URL:";
+
+function encodeChannelUrl(description: string, channelUrl: string): string {
+  if (!channelUrl.trim()) return description;
+  return `${description}${CHANNEL_URL_DELIMITER}${channelUrl.trim()}]`;
+}
+
+function decodeChannelUrl(raw: string): {
+  description: string;
+  channelUrl: string;
+} {
+  const idx = raw.indexOf(CHANNEL_URL_DELIMITER);
+  if (idx === -1) return { description: raw, channelUrl: "" };
+  const description = raw.slice(0, idx);
+  const rest = raw.slice(idx + CHANNEL_URL_DELIMITER.length);
+  const channelUrl = rest.endsWith("]") ? rest.slice(0, -1) : rest;
+  return { description, channelUrl };
+}
 
 interface VideoFormData {
   title: string;
@@ -292,6 +596,7 @@ interface VideoFormData {
   category: string;
   videoUrl: string;
   thumbnailUrl: string;
+  channelUrl: string;
 }
 
 const emptyVideoForm: VideoFormData = {
@@ -300,6 +605,7 @@ const emptyVideoForm: VideoFormData = {
   category: "tutorial",
   videoUrl: "",
   thumbnailUrl: "",
+  channelUrl: "",
 };
 
 function VideosTab() {
@@ -323,12 +629,14 @@ function VideosTab() {
 
   const openEdit = (v: Video) => {
     setEditingVideo(v);
+    const { description, channelUrl } = decodeChannelUrl(v.description);
     setForm({
       title: v.title,
-      description: v.description,
+      description,
       category: v.category,
       videoUrl: v.videoUrl,
       thumbnailUrl: v.thumbnailUrl,
+      channelUrl,
     });
     setFormErrors({});
     setShowModal(true);
@@ -345,12 +653,20 @@ function VideosTab() {
 
   const handleSave = async () => {
     if (!validate()) return;
+    const finalDescription = encodeChannelUrl(
+      form.description,
+      form.channelUrl,
+    );
+    const payload = { ...form, description: finalDescription };
     try {
       if (editingVideo) {
-        await editMutation.mutateAsync({ videoId: editingVideo.id, ...form });
+        await editMutation.mutateAsync({
+          videoId: editingVideo.id,
+          ...payload,
+        });
         toast.success("Video updated");
       } else {
-        await uploadMutation.mutateAsync(form);
+        await uploadMutation.mutateAsync(payload);
         toast.success("Video uploaded");
       }
       setShowModal(false);
@@ -564,6 +880,26 @@ function VideosTab() {
                 data-ocid="admin.video.thumbnail.input"
                 placeholder="https://..."
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                YouTube Channel URL{" "}
+                <span className="text-muted-foreground text-xs">
+                  (optional)
+                </span>
+              </Label>
+              <Input
+                value={form.channelUrl}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, channelUrl: e.target.value }))
+                }
+                data-ocid="admin.video.channel_url.input"
+                placeholder="https://www.youtube.com/@yourchannel"
+              />
+              <p className="text-xs text-muted-foreground">
+                Members will see a "Visit YouTube Channel" button on this video.
+              </p>
             </div>
           </div>
           <DialogFooter>

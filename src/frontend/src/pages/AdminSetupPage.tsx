@@ -6,61 +6,80 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CheckCircle2, Eye, EyeOff, Loader2, Shield, User } from "lucide-react";
+import { CheckCircle2, Info, Loader2, Shield, User } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createActorWithConfig } from "../config";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
+type PageState =
+  | "idle"
+  | "checking"
+  | "already_admin"
+  | "claiming"
+  | "success"
+  | "admin_taken";
+
 export default function AdminSetupPage() {
   const { identity, login, isLoggingIn } = useInternetIdentity();
-  const [adminToken, setAdminToken] = useState("");
-  const [showToken, setShowToken] = useState(false);
-  const [claiming, setClaiming] = useState(false);
-  const [done, setDone] = useState(false);
+  const [pageState, setPageState] = useState<PageState>("idle");
 
-  const handleBecomeAdmin = async () => {
-    if (!identity) {
-      login();
-      return;
-    }
-    if (!adminToken.trim()) {
-      toast.error("Please enter the admin token.");
-      return;
-    }
+  // When identity is available, check if caller is already admin
+  useEffect(() => {
+    if (!identity) return;
 
+    let cancelled = false;
+    const checkAdmin = async () => {
+      setPageState("checking");
+      try {
+        const freshActor = await createActorWithConfig({
+          agentOptions: { identity },
+        });
+        const isAdmin = await freshActor.isCallerAdmin();
+        if (!cancelled) {
+          if (isAdmin) {
+            setPageState("already_admin");
+          } else {
+            setPageState("idle");
+          }
+        }
+      } catch {
+        if (!cancelled) setPageState("idle");
+      }
+    };
+
+    checkAdmin();
+    return () => {
+      cancelled = true;
+    };
+  }, [identity]);
+
+  const handleClaimAdmin = async () => {
+    if (!identity) return;
+
+    setPageState("claiming");
     try {
-      setClaiming(true);
-
-      // Create a FRESH actor with this identity — does NOT auto-call _initializeAccessControlWithSecret
       const freshActor = await createActorWithConfig({
         agentOptions: { identity },
       });
-
-      // Call with admin token — if this principal is not yet registered, it will become admin
-      await freshActor._initializeAccessControlWithSecret(adminToken.trim());
-
-      // Verify it worked
-      const isAdmin = await freshActor.isCallerAdmin();
-      if (isAdmin) {
-        setDone(true);
-        toast.success("Admin access granted! You can now manage the app.");
+      const result = await freshActor.claimFirstAdmin();
+      if (result) {
+        setPageState("success");
+        toast.success("Admin access granted!");
       } else {
-        toast.error(
-          "Could not claim admin. The token may be wrong, or admin was already claimed by another identity. Contact Caffeine support if needed.",
-        );
+        setPageState("admin_taken");
       }
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to claim admin role";
       toast.error(msg);
-    } finally {
-      setClaiming(false);
+      setPageState("idle");
     }
   };
+
+  const isClaiming = pageState === "claiming";
+  const isChecking = pageState === "checking";
 
   return (
     <div className="min-h-screen hero-gradient pattern-bg flex items-center justify-center px-4">
@@ -80,26 +99,27 @@ export default function AdminSetupPage() {
                 <CardTitle className="font-display text-xl">
                   Admin Setup
                 </CardTitle>
-                <CardDescription>
-                  Tm11PrimeTime — First-time admin registration
-                </CardDescription>
+                <CardDescription>Tm11PrimeTime — Admin Login</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
-            {done ? (
-              <div
+            {/* Already admin state */}
+            {pageState === "already_admin" && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
                 className="flex flex-col items-center gap-4 py-4 text-center"
-                data-ocid="adminsetup.success_state"
+                data-ocid="adminsetup.already_admin_state"
               >
                 <CheckCircle2 className="w-12 h-12 text-success" />
                 <div>
                   <p className="font-display font-semibold text-lg">
-                    Admin access granted!
+                    You are already the admin!
                   </p>
                   <p className="text-muted-foreground text-sm mt-1">
-                    You are now the admin. Go to the home page and log in -- the
-                    Admin tab will appear in the menu bar.
+                    Go to the home page and use the Admin tab to manage users,
+                    videos, and withdrawals.
                   </p>
                 </div>
                 <Button
@@ -111,10 +131,75 @@ export default function AdminSetupPage() {
                 >
                   Go to Home
                 </Button>
-              </div>
-            ) : (
+              </motion.div>
+            )}
+
+            {/* Success state */}
+            {pageState === "success" && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center gap-4 py-4 text-center"
+                data-ocid="adminsetup.success_state"
+              >
+                <CheckCircle2 className="w-12 h-12 text-success" />
+                <div>
+                  <p className="font-display font-semibold text-lg">
+                    You are now the admin!
+                  </p>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Every time you log in with this Internet Identity, you will
+                    have admin access.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    window.location.href = "/";
+                  }}
+                  data-ocid="adminsetup.goto_home.button"
+                  className="bg-primary text-primary-foreground"
+                >
+                  Go to Home
+                </Button>
+              </motion.div>
+            )}
+
+            {/* Admin already taken state */}
+            {pageState === "admin_taken" && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center gap-4 py-4 text-center"
+                data-ocid="adminsetup.admin_taken_state"
+              >
+                <Info className="w-12 h-12 text-warning" />
+                <div>
+                  <p className="font-display font-semibold text-lg">
+                    Admin already claimed
+                  </p>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Admin access has already been claimed. Log in with the
+                    original admin Internet Identity to access the Admin panel.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    window.location.href = "/";
+                  }}
+                  data-ocid="adminsetup.goto_home.button"
+                >
+                  Go Back
+                </Button>
+              </motion.div>
+            )}
+
+            {/* Main flow: idle / checking / claiming */}
+            {(pageState === "idle" ||
+              pageState === "checking" ||
+              pageState === "claiming") && (
               <>
-                {/* Step 1 */}
+                {/* Step 1: Login */}
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
@@ -130,14 +215,14 @@ export default function AdminSetupPage() {
                       Log in with Internet Identity
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Your unique secure login
+                      Your secure login
                     </p>
                   </div>
                 </div>
 
                 <div className="ml-4 border-l-2 border-border h-3" />
 
-                {/* Step 2 */}
+                {/* Step 2: Claim */}
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
@@ -149,14 +234,15 @@ export default function AdminSetupPage() {
                     2
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Enter Admin Token</p>
+                    <p className="text-sm font-medium">Claim Admin Access</p>
                     <p className="text-xs text-muted-foreground">
-                      Found in your Caffeine project settings
+                      One tap to become admin
                     </p>
                   </div>
                 </div>
 
-                {!identity ? (
+                {/* Step 1 button: not logged in */}
+                {!identity && (
                   <Button
                     className="w-full gap-2 mt-2"
                     onClick={login}
@@ -170,60 +256,35 @@ export default function AdminSetupPage() {
                     )}
                     {isLoggingIn ? "Logging in..." : "Step 1: Log In"}
                   </Button>
-                ) : (
+                )}
+
+                {/* Logged in: show identity badge + Step 2 button */}
+                {identity && (
                   <div className="space-y-3">
                     <div className="rounded-lg bg-success/5 border border-success/20 px-3 py-2 text-sm text-success flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 shrink-0" />
                       <span className="break-all font-mono text-xs">
-                        {identity.getPrincipal().toString()}
+                        Logged in as:{" "}
+                        {identity.getPrincipal().toString().slice(0, 20)}...
                       </span>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="admin-token" className="text-sm">
-                        Admin Token
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          id="admin-token"
-                          type={showToken ? "text" : "password"}
-                          placeholder="Paste your admin token here"
-                          value={adminToken}
-                          onChange={(e) => setAdminToken(e.target.value)}
-                          data-ocid="adminsetup.token.input"
-                          className="pr-10 font-mono text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowToken((v) => !v)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          data-ocid="adminsetup.toggle_token_visibility.button"
-                        >
-                          {showToken ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Find this in your Caffeine dashboard under "Project
-                        Settings" → "Admin Token"
-                      </p>
                     </div>
 
                     <Button
                       className="w-full bg-primary text-primary-foreground gap-2 shadow-gold"
-                      onClick={handleBecomeAdmin}
-                      disabled={claiming || !adminToken.trim()}
+                      onClick={handleClaimAdmin}
+                      disabled={isClaiming || isChecking}
                       data-ocid="adminsetup.become_admin.button"
                     >
-                      {claiming ? (
+                      {isClaiming || isChecking ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <Shield className="w-4 h-4" />
                       )}
-                      {claiming ? "Claiming..." : "Step 2: Claim Admin Access"}
+                      {isChecking
+                        ? "Checking..."
+                        : isClaiming
+                          ? "Claiming..."
+                          : "Step 2: Claim Admin Access"}
                     </Button>
                   </div>
                 )}

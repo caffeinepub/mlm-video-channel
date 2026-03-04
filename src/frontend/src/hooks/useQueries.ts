@@ -21,7 +21,7 @@ export function useCallerRole() {
       return actor.getCallerUserRole();
     },
     enabled: !!actor && !isFetching,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 }
 
@@ -31,10 +31,15 @@ export function useCallerProfile() {
     queryKey: ["callerProfile"],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getCallerUserProfile();
+      try {
+        return await actor.getCallerUserProfile();
+      } catch {
+        // Admin-only identities may not have a user profile - return null gracefully
+        return null;
+      }
     },
     enabled: !!actor && !isFetching,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 }
 
@@ -47,7 +52,7 @@ export function useIsAdmin() {
       return actor.isCallerAdmin();
     },
     enabled: !!actor && !isFetching,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 }
 
@@ -344,17 +349,37 @@ export function useSaveProfile() {
   });
 }
 
+// ─── Remove User ──────────────────────────────────────────────────────────
+
+export function useRemoveUser() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, bigint>({
+    mutationFn: async (userId) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.removeUser(userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allUsers"] });
+    },
+  });
+}
+
 // ─── Submit UTR ───────────────────────────────────────────────────────────
 
 export function useSubmitUTR() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: async (utrId) => {
+  return useMutation<
+    void,
+    Error,
+    { utrId: string; name: string; mobile: string }
+  >({
+    mutationFn: async ({ utrId, name, mobile }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.submitUTR(utrId);
+      return actor.submitUTR(utrId, name, mobile);
     },
-    onSuccess: (_data, _vars, _ctx) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["callerProfile"] });
       queryClient.invalidateQueries({ queryKey: ["allUsers"] });
     },

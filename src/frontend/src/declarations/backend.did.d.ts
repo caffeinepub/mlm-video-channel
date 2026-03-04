@@ -55,6 +55,7 @@ export interface WithdrawalRequest {
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'claimFirstAdmin' : ActorMethod<[], boolean>,
   'confirmPayment' : ActorMethod<[bigint], undefined>,
   'deleteVideo' : ActorMethod<[bigint], undefined>,
   'editVideo' : ActorMethod<
@@ -79,9 +80,10 @@ export interface _SERVICE {
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'processWithdrawalRequest' : ActorMethod<[bigint, boolean], undefined>,
   'registerUser' : ActorMethod<[string, string, string, [] | [string]], string>,
+  'removeUser' : ActorMethod<[bigint], undefined>,
   'requestWithdrawal' : ActorMethod<[bigint, bigint], bigint>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'submitUTR' : ActorMethod<[string], undefined>,
+  'submitUTR' : ActorMethod<[string, string, string], undefined>,
   'uploadVideo' : ActorMethod<[string, string, string, string, string], bigint>,
 }
 export declare const idlService: IDL.ServiceClass;

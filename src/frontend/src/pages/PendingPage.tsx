@@ -7,15 +7,38 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   CheckCircle2,
   Clock,
   Copy,
+  Hash,
   Loader2,
   LogOut,
+  Phone,
   PlaySquare,
   Send,
+  User as UserIcon,
 } from "lucide-react";
+
+const UPI_LOGOS: Record<string, { src: string; alt: string }> = {
+  PhonePe: {
+    src: "/assets/generated/logo-phonepe-transparent.dim_120x120.png",
+    alt: "PhonePe",
+  },
+  GPay: {
+    src: "/assets/generated/logo-gpay-transparent.dim_120x120.png",
+    alt: "Google Pay",
+  },
+  Paytm: {
+    src: "/assets/generated/logo-paytm-transparent.dim_120x120.png",
+    alt: "Paytm",
+  },
+  BHIM: {
+    src: "/assets/generated/logo-bhim-transparent.dim_120x120.png",
+    alt: "BHIM UPI",
+  },
+};
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -34,16 +57,26 @@ export default function PendingPage({ user }: PendingPageProps) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [utrInput, setUtrInput] = useState("");
+  const [nameInput, setNameInput] = useState(user.name ?? "");
+  const [mobileInput, setMobileInput] = useState(user.mobile ?? "");
   const submitUTRMutation = useSubmitUTR();
 
+  const isMobileValid = /^\d{10}$/.test(mobileInput.trim());
+  const isFormValid =
+    nameInput.trim() !== "" && isMobileValid && utrInput.trim() !== "";
+
   const handleSubmitUTR = async () => {
-    if (!utrInput.trim()) return;
+    if (!isFormValid) return;
     try {
-      await submitUTRMutation.mutateAsync(utrInput.trim());
-      toast.success("UTR submitted successfully! Admin will review shortly.");
+      await submitUTRMutation.mutateAsync({
+        utrId: utrInput.trim(),
+        name: nameInput.trim(),
+        mobile: mobileInput.trim(),
+      });
+      toast.success("Payment details submitted! Admin will review shortly.");
       setUtrInput("");
     } catch {
-      toast.error("Failed to submit UTR. Please try again.");
+      toast.error("Failed to submit. Please try again.");
     }
   };
 
@@ -64,7 +97,7 @@ export default function PendingPage({ user }: PendingPageProps) {
 
   const shareOnWhatsApp = () => {
     const message = encodeURIComponent(
-      `Join me on Tm11PrimeTime! Pay ₹100 once to access exclusive videos and earn through referrals.\n\nUse my referral link: ${referralLink}`,
+      `🎬 Join *Tm11PrimeTime* — Premium Video Channel!\n\nPay ₹100 once to access exclusive videos and earn through 15-level referrals.\n\n📌 My Referral Code: *${user.referralCode}*\n🔗 Join here: ${referralLink}`,
     );
     window.open(`https://wa.me/?text=${message}`, "_blank");
   };
@@ -192,15 +225,11 @@ export default function PendingPage({ user }: PendingPageProps) {
                     data-ocid={`pending.pay_${name.toLowerCase()}.button`}
                     className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-secondary border border-border hover:border-primary/30 hover:bg-accent transition-all text-sm font-medium"
                   >
-                    <span>
-                      {name === "PhonePe"
-                        ? "💜"
-                        : name === "GPay"
-                          ? "🔵"
-                          : name === "Paytm"
-                            ? "🔷"
-                            : "🇮🇳"}
-                    </span>
+                    <img
+                      src={UPI_LOGOS[name]?.src}
+                      alt={UPI_LOGOS[name]?.alt ?? name}
+                      className="w-5 h-5 object-contain rounded"
+                    />
                     {name}
                   </a>
                 ))}
@@ -216,41 +245,110 @@ export default function PendingPage({ user }: PendingPageProps) {
                 Submit Payment Proof
               </CardTitle>
               <CardDescription>
-                Enter your UTR / Transaction ID after completing the UPI payment
+                Fill in your details and UTR / Transaction ID after completing
+                the UPI payment
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               {user.utrId && (
-                <div className="rounded-lg bg-success/5 border border-success/20 px-3 py-2 text-sm">
-                  <span className="text-success/80 font-medium text-xs">
-                    Already submitted:{" "}
+                <div className="rounded-lg bg-success/5 border border-success/20 px-3 py-3 text-sm space-y-1">
+                  <span className="text-success/80 font-medium text-xs block">
+                    ✓ Payment proof already submitted
                   </span>
-                  <span className="font-mono-custom text-xs">{user.utrId}</span>
+                  <span className="font-mono-custom text-xs text-muted-foreground">
+                    UTR: {user.utrId}
+                  </span>
                 </div>
               )}
-              <div className="flex gap-2">
+
+              {/* User Name */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="pending-name"
+                  className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"
+                >
+                  <UserIcon className="w-3.5 h-3.5" />
+                  User Name
+                </Label>
                 <Input
+                  id="pending-name"
+                  placeholder="Enter your full name"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  data-ocid="pending.name.input"
+                  className="text-sm"
+                  autoComplete="name"
+                />
+              </div>
+
+              {/* Contact No. */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="pending-mobile"
+                  className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  Contact No.
+                </Label>
+                <Input
+                  id="pending-mobile"
+                  placeholder="10-digit mobile number"
+                  value={mobileInput}
+                  onChange={(e) =>
+                    setMobileInput(
+                      e.target.value.replace(/\D/g, "").slice(0, 10),
+                    )
+                  }
+                  data-ocid="pending.mobile.input"
+                  className="text-sm font-mono-custom"
+                  inputMode="numeric"
+                  maxLength={10}
+                  autoComplete="tel"
+                />
+                {mobileInput.length > 0 && !isMobileValid && (
+                  <p className="text-xs text-destructive">
+                    Please enter a valid 10-digit mobile number
+                  </p>
+                )}
+              </div>
+
+              {/* UTR / Transaction ID */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="pending-utr"
+                  className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"
+                >
+                  <Hash className="w-3.5 h-3.5" />
+                  UTR / Transaction ID
+                </Label>
+                <Input
+                  id="pending-utr"
                   placeholder="Enter UTR / Transaction ID"
                   value={utrInput}
                   onChange={(e) => setUtrInput(e.target.value)}
                   data-ocid="pending.utr.input"
-                  className="flex-1 font-mono-custom text-sm"
+                  className="font-mono-custom text-sm"
+                  autoComplete="off"
                 />
-                <Button
-                  onClick={handleSubmitUTR}
-                  disabled={submitUTRMutation.isPending || !utrInput.trim()}
-                  data-ocid="pending.utr.submit_button"
-                  className="bg-primary text-primary-foreground gap-1.5 whitespace-nowrap"
-                >
-                  {submitUTRMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                  Submit
-                </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
+
+              <Button
+                onClick={handleSubmitUTR}
+                disabled={submitUTRMutation.isPending || !isFormValid}
+                data-ocid="pending.utr.submit_button"
+                className="w-full bg-primary text-primary-foreground gap-2"
+              >
+                {submitUTRMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                {submitUTRMutation.isPending
+                  ? "Submitting..."
+                  : "Submit Payment Proof"}
+              </Button>
+
+              <p className="text-xs text-muted-foreground text-center">
                 After submitting, admin will verify your payment and activate
                 your account.
               </p>

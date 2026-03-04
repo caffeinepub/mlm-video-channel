@@ -59,6 +59,7 @@ export const WithdrawalRequest = IDL.Record({
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'claimFirstAdmin' : IDL.Func([], [IDL.Bool], []),
   'confirmPayment' : IDL.Func([IDL.Nat], [], []),
   'deleteVideo' : IDL.Func([IDL.Nat], [], []),
   'editVideo' : IDL.Func(
@@ -105,9 +106,10 @@ export const idlService = IDL.Service({
       [IDL.Text],
       [],
     ),
+  'removeUser' : IDL.Func([IDL.Nat], [], []),
   'requestWithdrawal' : IDL.Func([IDL.Nat, IDL.Nat], [IDL.Nat], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-  'submitUTR' : IDL.Func([IDL.Text], [], []),
+  'submitUTR' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
   'uploadVideo' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
       [IDL.Nat],
@@ -166,6 +168,7 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'claimFirstAdmin' : IDL.Func([], [IDL.Bool], []),
     'confirmPayment' : IDL.Func([IDL.Nat], [], []),
     'deleteVideo' : IDL.Func([IDL.Nat], [], []),
     'editVideo' : IDL.Func(
@@ -212,9 +215,10 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Text],
         [],
       ),
+    'removeUser' : IDL.Func([IDL.Nat], [], []),
     'requestWithdrawal' : IDL.Func([IDL.Nat, IDL.Nat], [IDL.Nat], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-    'submitUTR' : IDL.Func([IDL.Text], [], []),
+    'submitUTR' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
     'uploadVideo' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
         [IDL.Nat],

@@ -208,8 +208,48 @@ export default function AppLayout({
         </motion.div>
       </main>
 
+      {/* Bottom nav for mobile */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-border flex items-center justify-around px-2 py-2 safe-area-pb">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              type="button"
+              key={item.id}
+              onClick={() => handleNav(item.id)}
+              data-ocid={`nav.bottom.${item.id}.link`}
+              className={cn(
+                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex-1",
+                currentPage === item.id
+                  ? "text-primary bg-primary/10"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="w-5 h-5" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => handleNav("admin")}
+            data-ocid="nav.bottom.admin.link"
+            className={cn(
+              "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex-1",
+              currentPage === "admin"
+                ? "text-primary bg-primary/10"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Shield className="w-5 h-5" />
+            <span>Admin</span>
+          </button>
+        )}
+      </nav>
+
       {/* Footer */}
-      <footer className="border-t border-border py-6">
+      <footer className="border-t border-border py-6 mb-16 md:mb-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <PlaySquare className="w-4 h-4 text-primary" />

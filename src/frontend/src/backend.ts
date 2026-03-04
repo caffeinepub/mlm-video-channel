@@ -139,6 +139,7 @@ export enum UserRole {
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    claimFirstAdmin(): Promise<boolean>;
     confirmPayment(userId: bigint): Promise<void>;
     deleteVideo(videoId: bigint): Promise<void>;
     editVideo(videoId: bigint, title: string, description: string, category: string, videoUrl: string, thumbnailUrl: string): Promise<void>;
@@ -157,9 +158,10 @@ export interface backendInterface {
     isCallerAdmin(): Promise<boolean>;
     processWithdrawalRequest(requestId: bigint, approve: boolean): Promise<void>;
     registerUser(name: string, mobile: string, upiId: string, referralCode: string | null): Promise<string>;
+    removeUser(userId: bigint): Promise<void>;
     requestWithdrawal(userId: bigint, amount: bigint): Promise<bigint>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    submitUTR(utrId: string): Promise<void>;
+    submitUTR(utrId: string, name: string, mobile: string): Promise<void>;
     uploadVideo(title: string, description: string, category: string, videoUrl: string, thumbnailUrl: string): Promise<bigint>;
 }
 import type { User as _User, UserProfile as _UserProfile, UserRole as _UserRole, WithdrawalRequest as _WithdrawalRequest } from "./declarations/backend.did.d.ts";
@@ -190,6 +192,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async claimFirstAdmin(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.claimFirstAdmin();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.claimFirstAdmin();
             return result;
         }
     }
@@ -451,6 +467,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async removeUser(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.removeUser(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.removeUser(arg0);
+            return result;
+        }
+    }
     async requestWithdrawal(arg0: bigint, arg1: bigint): Promise<bigint> {
         if (this.processError) {
             try {
@@ -479,17 +509,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async submitUTR(arg0: string): Promise<void> {
+    async submitUTR(arg0: string, arg1: string, arg2: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.submitUTR(arg0);
+                const result = await this.actor.submitUTR(arg0, arg1, arg2);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.submitUTR(arg0);
+            const result = await this.actor.submitUTR(arg0, arg1, arg2);
             return result;
         }
     }
